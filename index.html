@@ -1,0 +1,922 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>宝物紹介 スクリプト練習ツール</title>
+<style>
+:root {
+  --blue: #3b82f6; --blue-lt: #dbeafe; --blue-dk: #1d4ed8;
+  --green: #10b981; --green-lt: #d1fae5; --green-dk: #065f46;
+  --purple: #7c3aed; --purple-lt: #ede9fe;
+  --amber: #f59e0b; --amber-lt: #fef3c7;
+  --gray-lt: #f3f4f6;
+  --r: 12px; --sh: 0 2px 12px rgba(0,0,0,0.08);
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #f5f7fa; color: #1a1a2e; min-height: 100vh; }
+
+/* Header */
+.hdr { background: linear-gradient(135deg,#667eea,#764ba2); padding: 13px 16px; display: flex; align-items: center; gap: 10px; position: sticky; top: 0; z-index: 100; box-shadow: 0 2px 8px rgba(102,126,234,.4); }
+.hdr-back { background: rgba(255,255,255,.2); border: none; color: white; width: 34px; height: 34px; border-radius: 50%; font-size: 1.1em; cursor: pointer; display: none; align-items: center; justify-content: center; }
+.hdr-back.on { display: flex; }
+.hdr-back:hover { background: rgba(255,255,255,.3); }
+.hdr h1 { color: white; font-size: 1em; font-weight: 700; flex: 1; }
+.hdr-badge { background: rgba(255,255,255,.2); color: white; font-size: .75em; padding: 3px 10px; border-radius: 20px; }
+
+/* Screens */
+.scr { display: none; }
+.scr.on { display: block; }
+
+/* ── Setup ── */
+.setup-wrap { padding: 18px 16px 120px; max-width: 560px; margin: 0 auto; }
+.card { background: white; border-radius: var(--r); padding: 18px; margin-bottom: 14px; box-shadow: var(--sh); }
+.card h2 { font-size: .82em; font-weight: 700; color: #667eea; text-transform: uppercase; letter-spacing: .06em; margin-bottom: 14px; padding-bottom: 8px; border-bottom: 2px solid #e8edff; }
+.fld { margin-bottom: 11px; }
+.fld:last-child { margin-bottom: 0; }
+.fld label { display: block; font-size: .82em; color: #666; margin-bottom: 4px; font-weight: 500; }
+.fld input, .fld textarea { width: 100%; padding: 9px 11px; border: 1.5px solid #e5e7eb; border-radius: 8px; font-family: inherit; font-size: .92em; background: #fafafa; color: #333; transition: border-color .2s, box-shadow .2s; }
+.fld input:focus, .fld textarea:focus { outline: none; border-color: #667eea; box-shadow: 0 0 0 3px rgba(102,126,234,.12); background: white; }
+.fld textarea { resize: vertical; min-height: 64px; line-height: 1.5; }
+.fld .hint { font-size: .74em; color: #9ca3af; margin-top: 3px; }
+.what-box { background: var(--purple-lt); border-radius: 8px; padding: 10px 12px; font-size: .8em; color: var(--purple); margin-top: 10px; line-height: 1.8; }
+.what-box strong { display: block; margin-bottom: 3px; }
+.cta-bar { position: fixed; bottom: 0; left: 0; right: 0; padding: 13px 16px; background: white; box-shadow: 0 -4px 20px rgba(0,0,0,.08); z-index: 50; }
+.btn-cta { display: block; width: 100%; max-width: 400px; margin: 0 auto; padding: 13px; background: linear-gradient(135deg,#667eea,#764ba2); color: white; border: none; border-radius: 11px; font-family: inherit; font-size: 1em; font-weight: 700; cursor: pointer; transition: transform .2s, opacity .2s; }
+.btn-cta:hover { transform: translateY(-2px); opacity: .95; }
+
+/* ── Modes ── */
+.modes-wrap { padding: 22px 16px 40px; max-width: 560px; margin: 0 auto; }
+.modes-greet { text-align: center; margin-bottom: 22px; }
+.modes-greet h2 { font-size: 1.1em; color: #333; margin-bottom: 5px; }
+.modes-greet p { font-size: .84em; color: #888; }
+.mode-list { display: flex; flex-direction: column; gap: 12px; }
+.mode-card { background: white; border: 2px solid #e5e7eb; border-radius: var(--r); padding: 16px 18px; display: flex; align-items: center; gap: 14px; cursor: pointer; transition: all .2s; text-align: left; font-family: inherit; width: 100%; }
+.mode-card:hover { border-color: #667eea; box-shadow: 0 4px 16px rgba(102,126,234,.15); transform: translateY(-2px); }
+.mode-card[data-m="karaoke"] { border-left: 4px solid var(--blue); }
+.mode-card[data-m="memory"]  { border-left: 4px solid var(--amber); }
+.mode-card[data-m="oneon1"]  { border-left: 4px solid var(--green); }
+.mode-ic { font-size: 1.9em; width: 48px; height: 48px; border-radius: 10px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+.mode-card[data-m="karaoke"] .mode-ic { background: var(--blue-lt); }
+.mode-card[data-m="memory"]  .mode-ic { background: var(--amber-lt); }
+.mode-card[data-m="oneon1"]  .mode-ic { background: var(--green-lt); }
+.mode-info .mode-ttl { font-size: .95em; font-weight: 700; color: #333; margin-bottom: 2px; }
+.mode-info .mode-sub { font-size: .78em; color: #888; line-height: 1.4; }
+.mode-arr { margin-left: auto; color: #ccc; font-size: 1.2em; flex-shrink: 0; }
+.mode-card:hover .mode-arr { color: #667eea; }
+.btn-edit { display: block; text-align: center; margin-top: 18px; padding: 10px; background: var(--gray-lt); border: none; border-radius: 9px; font-family: inherit; font-size: .85em; color: #666; cursor: pointer; width: 100%; }
+.btn-edit:hover { background: #e5e7eb; }
+
+/* ── Script lines (shared) ── */
+.prac-hdr { padding: 12px 16px 0; max-width: 640px; margin: 0 auto; }
+.prog-lbl { display: flex; justify-content: space-between; font-size: .76em; color: #999; margin-bottom: 4px; }
+.prog-track { height: 5px; background: #e5e7eb; border-radius: 3px; overflow: hidden; }
+.prog-fill { height: 100%; background: linear-gradient(90deg,#667eea,#764ba2); border-radius: 3px; transition: width .4s ease; }
+.script-body { padding: 12px 16px 150px; max-width: 640px; margin: 0 auto; }
+.lb { display: flex; gap: 9px; padding: 10px 12px; border-radius: 10px; margin-bottom: 7px; border: 1.5px solid transparent; transition: all .3s; }
+.lb.role-T { background: var(--blue-lt); border-color: #bfdbfe; }
+.lb.role-S { background: var(--green-lt); border-color: #a7f3d0; }
+/* Karaoke dim/highlight */
+.karaoke-scr .lb { opacity: .28; }
+.karaoke-scr .lb.past { opacity: .5; }
+.karaoke-scr .lb.active { opacity: 1; transform: scale(1.015); }
+.karaoke-scr .lb.active.role-T { background: #bfdbfe; border-color: var(--blue); box-shadow: 0 3px 12px rgba(59,130,246,.22); }
+.karaoke-scr .lb.active.role-S { background: #a7f3d0; border-color: var(--green); box-shadow: 0 3px 12px rgba(16,185,129,.22); }
+.role-pill { width: 28px; height: 28px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: .78em; flex-shrink: 0; margin-top: 1px; }
+.role-T .role-pill { background: var(--blue); color: white; }
+.role-S .role-pill { background: var(--green); color: white; }
+.lt { flex: 1; font-size: .91em; line-height: 1.65; }
+.wtag { display: inline-block; background: var(--purple-lt); color: var(--purple); font-size: .7em; font-weight: 700; padding: 1px 7px; border-radius: 10px; margin-right: 4px; vertical-align: middle; }
+
+/* Blanks */
+.blk { display: inline-block; background: var(--amber-lt); border-bottom: 2.5px solid var(--amber); min-width: 60px; padding: 0 3px; border-radius: 4px 4px 0 0; cursor: pointer; transition: all .2s; color: transparent; user-select: none; font-size: .88em; }
+.blk:hover { background: #fde68a; }
+.blk.rev { background: var(--purple-lt); border-bottom-color: var(--purple); color: var(--purple); font-weight: 600; }
+
+/* Karaoke word highlighting */
+.kword { display: inline; border-radius: 4px; transition: background .1s, color .1s; }
+.kword.k-pending { color: #c0c4cc; }
+.kword.k-active  { background: #fbbf24; color: #1a1a2e; padding: 1px 4px; font-weight: 700; box-decoration-break: clone; -webkit-box-decoration-break: clone; }
+.kword.k-done    { color: inherit; }
+.kfield { font-weight: 700; color: var(--purple); }
+
+/* ── Controls bar ── */
+.ctrl-bar { position: fixed; bottom: 0; left: 0; right: 0; background: white; box-shadow: 0 -4px 20px rgba(0,0,0,.08); padding: 11px 16px 14px; z-index: 50; }
+.ctrl-inner { max-width: 560px; margin: 0 auto; }
+.btn { padding: 10px 18px; border-radius: 9px; border: none; font-family: inherit; font-size: .88em; font-weight: 600; cursor: pointer; transition: all .2s; display: inline-flex; align-items: center; gap: 5px; }
+.btn:active { transform: scale(.97); }
+.btn-primary { background: linear-gradient(135deg,#667eea,#764ba2); color: white; }
+.btn-primary:hover { opacity: .9; }
+.btn-sec { background: var(--gray-lt); color: #555; }
+.btn-sec:hover { background: #e5e7eb; }
+.btn-danger { background: #fee2e2; color: #dc2626; }
+
+/* Karaoke controls */
+.k-top { display: flex; align-items: center; gap: 10px; margin-bottom: 9px; }
+.k-arc { width: 38px; height: 38px; flex-shrink: 0; }
+.speed-row { display: flex; align-items: center; gap: 7px; font-size: .8em; color: #888; flex: 1; }
+.speed-row input[type=range] { flex: 1; accent-color: #667eea; }
+.k-btns { display: flex; gap: 9px; }
+.btn-play { flex: 1; }
+
+/* Level tabs */
+.lvl-tabs { display: flex; gap: 6px; padding-bottom: 4px; overflow-x: auto; -webkit-overflow-scrolling: touch; margin-bottom: 10px; }
+.lvl-tab { padding: 6px 14px; border-radius: 20px; border: 1.5px solid #e5e7eb; background: white; font-family: inherit; font-size: .78em; font-weight: 600; cursor: pointer; white-space: nowrap; transition: all .2s; color: #666; }
+.lvl-tab.on { background: #667eea; border-color: #667eea; color: white; }
+.lvl-tab:hover:not(.on) { border-color: #667eea; color: #667eea; }
+#memLvlDesc { font-size: .78em; color: #888; margin-bottom: 6px; }
+.mem-btns { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; }
+
+/* ── 1-on-1 ── */
+.oo-body { padding: 14px 16px 160px; max-width: 560px; margin: 0 auto; }
+.oo-card { background: white; border-radius: 16px; padding: 20px; box-shadow: 0 6px 24px rgba(0,0,0,.1); margin-bottom: 12px; min-height: 90px; }
+.oo-card-hdr { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; }
+.turn-badge { padding: 4px 13px; border-radius: 20px; font-size: .84em; font-weight: 700; }
+.turn-badge.T { background: var(--blue-lt); color: var(--blue-dk); }
+.turn-badge.S { background: var(--green-lt); color: var(--green-dk); }
+.oo-step { font-size: .78em; color: #aaa; margin-left: auto; }
+.oo-text { font-size: 1.02em; line-height: 1.75; color: #222; }
+.oo-silent { text-align: center; padding: 14px 0; }
+.oo-silent .mic { font-size: 2.4em; }
+.oo-silent p { font-size: .88em; color: #888; margin-top: 6px; }
+.btn-hint { width: 100%; padding: 10px; background: var(--purple-lt); color: var(--purple); border: 1.5px dashed var(--purple); border-radius: 8px; font-family: inherit; font-size: .84em; font-weight: 600; cursor: pointer; transition: all .2s; margin-bottom: 12px; }
+.btn-hint:hover { background: #ddd6fe; }
+.ctx-lbl { font-size: .74em; color: #bbb; text-transform: uppercase; letter-spacing: .05em; margin-bottom: 6px; }
+.ctx-line { display: flex; gap: 8px; font-size: .8em; color: #999; padding: 4px 0; border-bottom: 1px dashed #f0f0f0; }
+.ctx-line:last-child { border-bottom: none; }
+.ctx-pill { width: 20px; height: 20px; border-radius: 50%; font-size: .72em; font-weight: 700; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+.ctx-pill.T { background: var(--blue); color: white; }
+.ctx-pill.S { background: var(--green); color: white; }
+.oo-ctrl { max-width: 560px; margin: 0 auto; }
+.oo-hint-txt { text-align: center; font-size: .78em; color: #aaa; margin-bottom: 9px; }
+.btn-nxt { display: block; width: 100%; padding: 13px; background: linear-gradient(135deg,#667eea,#764ba2); color: white; border: none; border-radius: 11px; font-family: inherit; font-size: 1em; font-weight: 700; cursor: pointer; transition: all .2s; }
+.btn-nxt:hover { opacity: .9; transform: translateY(-1px); }
+
+/* Complete */
+.done-body { text-align: center; padding: 60px 20px 40px; max-width: 380px; margin: 0 auto; }
+.done-body .ic { font-size: 3.8em; margin-bottom: 14px; }
+.done-body h2 { font-size: 1.35em; margin-bottom: 8px; color: #333; }
+.done-body p { color: #888; font-size: .88em; margin-bottom: 22px; }
+.done-acts { display: flex; flex-direction: column; gap: 10px; max-width: 260px; margin: 0 auto; }
+.btn-done { padding: 12px; border-radius: 10px; border: none; font-family: inherit; font-size: .9em; font-weight: 600; cursor: pointer; transition: all .2s; }
+.btn-done.p { background: linear-gradient(135deg,#667eea,#764ba2); color: white; }
+.btn-done.s { background: var(--gray-lt); color: #555; }
+
+/* Toast */
+.toast { position: fixed; bottom: 110px; left: 50%; transform: translateX(-50%) translateY(14px); background: #1a1a2e; color: white; padding: 9px 18px; border-radius: 24px; font-size: .84em; opacity: 0; transition: opacity .3s, transform .3s; pointer-events: none; z-index: 1000; white-space: nowrap; }
+.toast.on { opacity: 1; transform: translateX(-50%) translateY(0); }
+</style>
+</head>
+<body>
+
+<!-- HEADER -->
+<header class="hdr">
+  <button class="hdr-back" id="backBtn" onclick="goBack()">←</button>
+  <h1 id="hdrTitle">🎁 宝物紹介スクリプト練習</h1>
+  <span class="hdr-badge" id="hdrBadge">Step 3</span>
+</header>
+
+<!-- ── SETUP ── -->
+<div id="scr-setup" class="scr on">
+  <div class="setup-wrap">
+    <div class="card">
+      <h2>基本情報</h2>
+      <div class="fld">
+        <label>先生の名前（例: Tanaka）</label>
+        <input id="f-teacher" type="text" placeholder="Tanaka" value="Tanaka">
+      </div>
+      <div class="fld">
+        <label>あなたの名前（例: Yamada）</label>
+        <input id="f-student" type="text" placeholder="Yamada">
+      </div>
+      <div class="fld">
+        <label>今日の気分（例: great / fine / a bit tired）</label>
+        <input id="f-mood" type="text" placeholder="great" value="great">
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>宝物について</h2>
+      <div class="fld">
+        <label>◆ What I treasure the most is ___</label>
+        <input id="f-treasure" type="text" placeholder="my grandfather's watch">
+        <div class="hint">宝物の名前を英語で書こう</div>
+      </div>
+      <div class="fld">
+        <label>説明文（いつ・どこで・誰から、1〜2文）</label>
+        <textarea id="f-explain" placeholder="My grandfather gave it to me when I was ten years old."></textarea>
+      </div>
+      <div class="fld">
+        <label>◆ It is what ___</label>
+        <input id="f-what2" type="text" placeholder="my grandfather gave me">
+        <div class="hint">例: my grandfather gave me / I have had since childhood</div>
+      </div>
+      <div class="what-box">
+        <strong>🔷 what を使った3つの文パターン</strong>
+        What I treasure the most is ___.<br>
+        It is what ___.<br>
+        What I learned from it is ___.
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>理由と学び</h2>
+      <div class="fld">
+        <label>First（理由①）</label>
+        <input id="f-r1" type="text" placeholder="it reminds me of my grandfather every day">
+      </div>
+      <div class="fld">
+        <label>Second（理由②）</label>
+        <input id="f-r2" type="text" placeholder="it taught me to value time">
+      </div>
+      <div class="fld">
+        <label>◆ What I learned from it is ___</label>
+        <input id="f-learned" type="text" placeholder="the importance of time">
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>追加質問への備え</h2>
+      <div class="fld">
+        <label>先生の追加質問に対する答え（1〜2文）</label>
+        <textarea id="f-extra" placeholder="I look at it every morning. It makes me feel calm and focused."></textarea>
+        <div class="hint">どんな質問が来るかわからないが、予想して準備しておこう！</div>
+      </div>
+    </div>
+  </div>
+  <div class="cta-bar">
+    <button class="btn-cta" onclick="goModes()">練習を始める →</button>
+  </div>
+</div>
+
+<!-- ── MODES ── -->
+<div id="scr-modes" class="scr">
+  <div class="modes-wrap">
+    <div class="modes-greet" id="modesGreet">
+      <h2>どのモードで練習する？</h2>
+      <p>3段階で本番に備えよう</p>
+    </div>
+    <div class="mode-list">
+      <button class="mode-card" data-m="karaoke" onclick="startMode('karaoke')">
+        <div class="mode-ic">🎵</div>
+        <div class="mode-info">
+          <div class="mode-ttl">1人練習モード</div>
+          <div class="mode-sub">スクリプト全体を見ながら、自動ハイライトに合わせて読む。速度調整つき</div>
+        </div>
+        <div class="mode-arr">›</div>
+      </button>
+      <button class="mode-card" data-m="memory" onclick="startMode('memory')">
+        <div class="mode-ic">🧠</div>
+        <div class="mode-info">
+          <div class="mode-ttl">暗記モード（Lv.1〜4）</div>
+          <div class="mode-sub">空欄が段階的に増える。タップで答えを確認しながら練習</div>
+        </div>
+        <div class="mode-arr">›</div>
+      </button>
+      <button class="mode-card" data-m="oneon1" onclick="startMode('oneon1')">
+        <div class="mode-ic">👥</div>
+        <div class="mode-info">
+          <div class="mode-ttl">先生と1対1練習</div>
+          <div class="mode-sub">先生が端末を操作。生徒は暗記で発表。詰まったらヒントを表示</div>
+        </div>
+        <div class="mode-arr">›</div>
+      </button>
+    </div>
+    <button class="btn-edit" onclick="showScr('scr-setup')">← スクリプトを編集する</button>
+  </div>
+</div>
+
+<!-- ── KARAOKE ── -->
+<div id="scr-karaoke" class="scr karaoke-scr">
+  <div class="prac-hdr">
+    <div class="prog-lbl"><span id="kProg">1 / 12</span><span id="kTime">--</span></div>
+    <div class="prog-track"><div class="prog-fill" id="kFill" style="width:0%"></div></div>
+  </div>
+  <div class="script-body" id="kScript"></div>
+  <div class="ctrl-bar">
+    <div class="ctrl-inner">
+      <div class="k-top">
+        <svg class="k-arc" viewBox="0 0 40 40">
+          <circle cx="20" cy="20" r="17" fill="none" stroke="#e5e7eb" stroke-width="4"/>
+          <circle cx="20" cy="20" r="17" fill="none" stroke="#667eea" stroke-width="4"
+            stroke-dasharray="106.8" stroke-dashoffset="106.8" stroke-linecap="round"
+            transform="rotate(-90 20 20)" id="kArc"/>
+        </svg>
+        <div class="speed-row">
+          <span>🐢</span>
+          <input type="range" id="kSpeed" min="1" max="5" value="3" oninput="onSpeed()">
+          <span>🐇</span>
+          <span id="kSpeedLbl" style="min-width:58px;font-size:.8em;">ふつう</span>
+        </div>
+        <button class="btn btn-danger" style="font-size:.8em;padding:7px 12px;" onclick="kRestart()">最初から</button>
+      </div>
+      <div class="k-btns">
+        <button class="btn btn-primary btn-play" id="btnPlay" onclick="kToggle()">▶ スタート</button>
+        <button class="btn btn-sec" onclick="kNext()">次へ ›</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ── MEMORY ── -->
+<div id="scr-memory" class="scr">
+  <div class="prac-hdr">
+    <div class="lvl-tabs" id="lvlTabs">
+      <button class="lvl-tab on" data-l="1" onclick="setLv(1)">Lv.1 入門</button>
+      <button class="lvl-tab" data-l="2" onclick="setLv(2)">Lv.2 基本</button>
+      <button class="lvl-tab" data-l="3" onclick="setLv(3)">Lv.3 応用</button>
+      <button class="lvl-tab" data-l="4" onclick="setLv(4)">Lv.4 完全</button>
+    </div>
+    <div id="memLvlDesc"></div>
+  </div>
+  <div class="script-body" id="mScript"></div>
+  <div class="ctrl-bar">
+    <div class="ctrl-inner">
+      <div class="mem-btns">
+        <button class="btn btn-sec" onclick="revealAll()">全部見る 👁</button>
+        <button class="btn btn-sec" onclick="hideAll()">全部隠す 🙈</button>
+        <button class="btn btn-primary" onclick="goModes()">← モードへ</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ── 1-ON-1 ── -->
+<div id="scr-oneon1" class="scr">
+  <div class="oo-body">
+    <div class="oo-card">
+      <div class="oo-card-hdr">
+        <span class="turn-badge T" id="ooBadge">T 先生</span>
+        <span class="oo-step" id="ooStep">1 / 12</span>
+      </div>
+      <div id="ooText" class="oo-text"></div>
+    </div>
+    <button class="btn-hint" id="ooHintBtn" onclick="ooReveal()" style="display:none;">💡 ヒントを見る（生徒が詰まったとき）</button>
+    <div>
+      <div class="ctx-lbl">これまでの流れ</div>
+      <div id="ooCtx"></div>
+    </div>
+  </div>
+  <div class="ctrl-bar">
+    <div class="oo-ctrl">
+      <div class="oo-hint-txt" id="ooHintTxt"></div>
+      <button class="btn-nxt" id="ooNxtBtn" onclick="ooNext()">次の発話へ →</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── COMPLETE ── -->
+<div id="scr-done" class="scr">
+  <div class="done-body">
+    <div class="ic">🎉</div>
+    <h2>練習完了！</h2>
+    <p id="doneMsg">お疲れ様でした。本番もきっとうまくいく！</p>
+    <div class="done-acts">
+      <button class="btn-done p" onclick="startMode(curMode)">もう一度同じ練習</button>
+      <button class="btn-done s" onclick="goModes()">別のモードへ</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ─────────────────────────────────────
+//  CONFIG
+// ─────────────────────────────────────
+const SPEED_MULT  = [2.4, 1.8, 1.0, 0.65, 0.45];
+const SPEED_LABEL = ['ゆっくり','やや遅い','ふつう','やや速い','速い'];
+const LV_DESC = [
+  '',
+  'Lv.1: ◆ what の3文（treasure / whatClause / learned）が空欄',
+  'Lv.2: Lv.1 + 説明文・理由①②・追加の答えも空欄',
+  'Lv.3: Lv.2 + 気分・先生の名前も空欄（ほぼ全部！）',
+  'Lv.4: 生徒（S）の台詞がすべて完全に空欄',
+];
+
+// field key -> { label, hideAtLv }
+const FM = {
+  teacher:  { label:'先生の名前',     hideAtLv: 3 },
+  student:  { label:'自分の名前',     hideAtLv: 4 },
+  mood:     { label:'気分',           hideAtLv: 3 },
+  treasure: { label:'宝物の名前',     hideAtLv: 1 },
+  explain:  { label:'説明文',         hideAtLv: 2 },
+  what2:    { label:'what の内容',    hideAtLv: 1 },
+  r1:       { label:'理由①',         hideAtLv: 2 },
+  r2:       { label:'理由②',         hideAtLv: 2 },
+  learned:  { label:'学んだこと',     hideAtLv: 1 },
+  extra:    { label:'追加の答え',     hideAtLv: 2 },
+};
+
+// ─────────────────────────────────────
+//  SCRIPT TEMPLATE
+// ─────────────────────────────────────
+// segs: array of strings or {k:'fieldkey'}
+// timing: base seconds for karaoke pause
+function mkScript(d) {
+  const g = k => d[k] || `(${FM[k].label})`;
+  return [
+    { role:'S', segs:['Hi, ',{k:'teacher'},' Sensei. How are you?'], timing:4 },
+    { role:'T', segs:['Hi, Mr./Ms. ',{k:'student'},'. I\'m happy, and you?'], timing:4 },
+    { role:'S', segs:['I\'m ',{k:'mood'},'. Today, I\'ll introduce my treasure to you.'], timing:5 },
+    { role:'T', segs:['Oh, what\'s your treasure?'], timing:3 },
+    { role:'S', segs:['◆ What I treasure the most is ',{k:'treasure'},'.'], timing:5 },
+    { role:'T', segs:['Wow, tell me more about it.'], timing:3 },
+    { role:'S', segs:[{k:'explain'},'\n◆ It is what ',{k:'what2'},'.'], timing:8 },
+    { role:'T', segs:['Why is it your treasure?'], timing:3 },
+    { role:'S', segs:['First, ',{k:'r1'},'.\nSecond, ',{k:'r2'},'.\n◆ What I learned from it is ',{k:'learned'},'.'], timing:10 },
+    { role:'T', segs:['（追加の質問をします。英語で答えよう！）'], timing:3, isQ:true },
+    { role:'S', segs:[{k:'extra'}], timing:7 },
+    { role:'T', segs:['Thank you, see you!'], timing:3 },
+  ];
+}
+
+// ─────────────────────────────────────
+//  STATE
+// ─────────────────────────────────────
+let ud = {};       // user data
+let sc = [];       // built script
+let curMode = '';
+// karaoke
+let kIdx = 0, kWordIdx = 0, kPlaying = false, kTimer = null, kAnim = null, kStart = 0, kDur = 0;
+let kTokens = [];
+// memory
+let mLv = 1;
+// 1-on-1
+let ooIdx = 0, ooRevd = false;
+
+// ─────────────────────────────────────
+//  NAVIGATION
+// ─────────────────────────────────────
+function showScr(id) {
+  document.querySelectorAll('.scr').forEach(s => s.classList.remove('on'));
+  document.getElementById(id).classList.add('on');
+  window.scrollTo(0, 0);
+  const back = document.getElementById('backBtn');
+  const title = document.getElementById('hdrTitle');
+  const badge = document.getElementById('hdrBadge');
+  const map = {
+    'scr-setup':   ['🎁 宝物紹介スクリプト練習', 'Step 3', false],
+    'scr-modes':   ['練習モードを選択', 'Step 3', true],
+    'scr-karaoke': ['🎤 1人練習モード', 'Mode 1', true],
+    'scr-memory':  ['🧠 暗記モード', 'Mode 2', true],
+    'scr-oneon1':  ['👥 1対1練習', 'Mode 3', true],
+    'scr-done':    ['練習完了！', '✓', true],
+  };
+  const [t, b, bk] = map[id] || ['', '', false];
+  title.textContent = t; badge.textContent = b;
+  back.classList.toggle('on', bk);
+}
+
+function goBack() {
+  const cur = document.querySelector('.scr.on');
+  if (!cur) return;
+  kStop();
+  if (cur.id === 'scr-modes' || cur.id === 'scr-done') showScr('scr-setup');
+  else goModes();
+}
+
+function goModes() {
+  kStop();
+  const name = ud.student || 'あなた';
+  document.getElementById('modesGreet').innerHTML =
+    `<h2>どのモードで練習する？</h2><p>${esc(name)} さんのスクリプト準備完了 ✓</p>`;
+  showScr('scr-modes');
+}
+
+// ─────────────────────────────────────
+//  SETUP → collect & go
+// ─────────────────────────────────────
+function goModes() {  // intentional re-def to collect first
+  kStop();
+  ud = {
+    teacher:  gv('f-teacher') || 'Tanaka',
+    student:  gv('f-student') || '---',
+    mood:     gv('f-mood')    || 'fine',
+    treasure: gv('f-treasure')|| '___',
+    explain:  gv('f-explain') || '___',
+    what2:    gv('f-what2')   || '___',
+    r1:       gv('f-r1')      || '___',
+    r2:       gv('f-r2')      || '___',
+    learned:  gv('f-learned') || '___',
+    extra:    gv('f-extra')   || '___',
+  };
+  sc = mkScript(ud);
+  const name = ud.student;
+  document.getElementById('modesGreet').innerHTML =
+    `<h2>どのモードで練習する？</h2><p>${esc(name)} さんのスクリプト準備完了 ✓</p>`;
+  showScr('scr-modes');
+}
+function gv(id) { const e=document.getElementById(id); return e?e.value.trim():''; }
+
+// ─────────────────────────────────────
+//  MODE ROUTING
+// ─────────────────────────────────────
+function startMode(mode) {
+  curMode = mode;
+  if (mode === 'karaoke') kStart_mode();
+  else if (mode === 'memory') mStart();
+  else if (mode === 'oneon1') ooStart();
+}
+
+// ─────────────────────────────────────
+//  RENDER HELPERS
+// ─────────────────────────────────────
+function esc(s) {
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+function escNl(s) { return esc(s).replace(/\n/g,'<br>'); }
+
+// mode: 'full' | 'mem' | 'oo-full' | 'oo-blank'
+function renderSegs(segs, mode, lv) {
+  return segs.map(seg => {
+    if (typeof seg === 'string') {
+      let h = escNl(seg);
+      // style ◆ marker
+      h = h.replace(/◆ /g, '<span class="wtag">◆ what</span>');
+      return h;
+    }
+    const k = seg.k, val = ud[k] || '', meta = FM[k];
+    if (mode === 'full' || mode === 'oo-full') {
+      return `<strong style="color:var(--purple)">${escNl(val)}</strong>`;
+    }
+    if (mode === 'mem') {
+      if (meta.hideAtLv <= lv) {
+        return `<span class="blk" data-val="${esc(val)}" onclick="toggleBlk(this)">${escNl(val)}</span>`;
+      }
+      return `<strong>${escNl(val)}</strong>`;
+    }
+    if (mode === 'oo-blank') {
+      const w = Math.max(val.length * 9, 50);
+      return `<span style="display:inline-block;border-bottom:2px solid #ccc;min-width:${w}px;height:1.1em;"></span>`;
+    }
+    return escNl(val);
+  }).join('');
+}
+
+function renderLine(line, i, mode, lv, activeIdx) {
+  const isT = line.role === 'T';
+  const segMode = (mode === 'karaoke' || mode === 'full') ? 'full'
+    : mode === 'mem' ? 'mem'
+    : mode === 'oo-full' ? 'oo-full'
+    : 'oo-blank';
+  const text = renderSegs(line.segs, segMode, lv);
+  let cls = `lb role-${line.role}`;
+  if (mode === 'karaoke') {
+    if (i < activeIdx) cls += ' past';
+    else if (i === activeIdx) cls += ' active';
+  }
+  return `<div class="${cls}" id="lb-${i}">
+    <div class="role-pill">${line.role}</div>
+    <div class="lt">${text}</div>
+  </div>`;
+}
+
+// ─────────────────────────────────────
+//  KARAOKE
+// ─────────────────────────────────────
+
+// Build word tokens for every line in the script
+function tokenizeScript() {
+  kTokens = sc.map(line => {
+    const words = [];
+    let wi = 0;
+    line.segs.forEach(seg => {
+      if (typeof seg === 'string') {
+        seg.split('\n').forEach((part, ni) => {
+          if (ni > 0) words.push({ br: true });
+          let prefix = '', p = part.trim();
+          if (p.startsWith('◆ ')) { prefix = '<span class="wtag">◆</span>'; p = p.slice(2).trimStart(); }
+          p.split(/\s+/).filter(w => w).forEach((w, i) => {
+            words.push({ html: (i === 0 && prefix) ? `${prefix} ${esc(w)}` : esc(w), idx: wi++ });
+          });
+        });
+      } else {
+        const val = ud[seg.k] || `(${FM[seg.k].label})`;
+        val.split(/\s+/).filter(w => w).forEach(w => {
+          words.push({ html: `<span class="kfield">${esc(w)}</span>`, idx: wi++ });
+        });
+      }
+    });
+    return { words, wordCount: wi };
+  });
+}
+
+// Render all lines with per-word spans
+function renderKaraokeScript() {
+  document.getElementById('kScript').innerHTML = sc.map((line, li) => {
+    const { words } = kTokens[li];
+    let lt = '';
+    words.forEach((w, i) => {
+      if (w.br) { lt += '<br>'; return; }
+      if (i > 0 && !words[i-1].br) lt += ' ';
+      lt += `<span class="kword k-pending" id="kw-${li}-${w.idx}">${w.html}</span>`;
+    });
+    return `<div class="lb role-${line.role}" id="lb-${li}">
+      <div class="role-pill">${line.role}</div>
+      <div class="lt">${lt}</div>
+    </div>`;
+  }).join('');
+}
+
+function kStart_mode() {
+  kIdx = 0; kWordIdx = 0; kPlaying = false; kStop();
+  tokenizeScript();
+  renderKaraokeScript();
+  kLineFocus(0, false);
+  kUpdateProg();
+  document.getElementById('btnPlay').textContent = '▶ スタート';
+  onSpeed();
+  showScr('scr-karaoke');
+}
+
+function kUpdateProg() {
+  const pct = sc.length ? (kIdx / sc.length) * 100 : 0;
+  document.getElementById('kFill').style.width = pct + '%';
+  document.getElementById('kProg').textContent = `${kIdx+1} / ${sc.length}`;
+}
+
+// Update line-block focus (background highlight)
+function kLineFocus(idx, scroll) {
+  sc.forEach((_,i) => {
+    const el = document.getElementById(`lb-${i}`);
+    if (!el) return;
+    el.classList.remove('active','past');
+    if (i < idx) el.classList.add('past');
+    else if (i === idx) el.classList.add('active');
+  });
+  if (scroll) {
+    const el = document.getElementById(`lb-${idx}`);
+    if (el) el.scrollIntoView({ behavior:'smooth', block:'center' });
+  }
+}
+
+// Highlight a single word, marking the previous one as done
+function kHighlightWord(li, wi) {
+  // Mark previous word done
+  let prevEl = null;
+  if (wi > 0) {
+    prevEl = document.getElementById(`kw-${li}-${wi-1}`);
+  } else if (li > 0) {
+    const pwc = kTokens[li-1].wordCount;
+    if (pwc > 0) prevEl = document.getElementById(`kw-${li-1}-${pwc-1}`);
+  }
+  if (prevEl) { prevEl.classList.remove('k-active'); prevEl.classList.add('k-done'); }
+
+  // Activate current word
+  const cur = document.getElementById(`kw-${li}-${wi}`);
+  if (cur) { cur.classList.remove('k-pending','k-done'); cur.classList.add('k-active'); }
+}
+
+// Mark all words in a line as done
+function kMarkLineDone(li) {
+  const wc = kTokens[li] ? kTokens[li].wordCount : 0;
+  for (let wi = 0; wi < wc; wi++) {
+    const el = document.getElementById(`kw-${li}-${wi}`);
+    if (el) { el.classList.remove('k-active','k-pending'); el.classList.add('k-done'); }
+  }
+}
+
+function kToggle() { kPlaying ? kPause() : kPlay(); }
+
+function kPlay() {
+  if (kIdx >= sc.length) { kIdx = 0; kWordIdx = 0; kLineFocus(0, true); kUpdateProg(); }
+  kPlaying = true;
+  document.getElementById('btnPlay').textContent = '⏸ 一時停止';
+  kSchedule();
+}
+
+function kPause() {
+  kPlaying = false;
+  kClearTimers();
+  document.getElementById('btnPlay').textContent = '▶ 再生';
+  kResetArc();
+}
+
+function kStop() {
+  kPlaying = false;
+  kClearTimers();
+  kResetArc();
+}
+
+function kClearTimers() {
+  if (kTimer) { clearTimeout(kTimer); kTimer = null; }
+  if (kAnim)  { cancelAnimationFrame(kAnim); kAnim = null; }
+}
+
+function kSchedule() {
+  kClearTimers();
+  if (kIdx >= sc.length) { kDone(); return; }
+
+  const { wordCount } = kTokens[kIdx];
+
+  // All words in this line done → advance to next line
+  if (kWordIdx >= wordCount) {
+    kMarkLineDone(kIdx);
+    kIdx++; kWordIdx = 0;
+    if (kIdx >= sc.length) { kDone(); return; }
+    kLineFocus(kIdx, true);
+    kUpdateProg();
+    kSchedule();
+    return;
+  }
+
+  // Highlight current word and schedule next
+  if (kWordIdx === 0) kLineFocus(kIdx, kIdx > 0);
+  kHighlightWord(kIdx, kWordIdx);
+
+  const spd = parseInt(document.getElementById('kSpeed').value) - 1;
+  const wordDur = (sc[kIdx].timing * SPEED_MULT[spd] * 1000) / Math.max(wordCount, 1);
+  kStart = performance.now(); kDur = wordDur;
+  kAnimArc();
+
+  kTimer = setTimeout(() => { kWordIdx++; kSchedule(); }, wordDur);
+}
+
+function kAnimArc() {
+  const arc = document.getElementById('kArc');
+  const C = 106.8;
+  function tick() {
+    if (!kPlaying) return;
+    const t = Math.min((performance.now() - kStart) / kDur, 1);
+    arc.style.strokeDashoffset = C * (1 - t);
+    const rem = Math.max(0, (kDur - (performance.now() - kStart)) / 1000);
+    document.getElementById('kTime').textContent = rem.toFixed(1) + 's';
+    if (t < 1) kAnim = requestAnimationFrame(tick);
+  }
+  tick();
+}
+
+function kResetArc() {
+  document.getElementById('kArc').style.strokeDashoffset = '106.8';
+  document.getElementById('kTime').textContent = '--';
+}
+
+function kDone() {
+  kPlaying = false;
+  document.getElementById('btnPlay').textContent = '▶ スタート';
+  kResetArc();
+  showDone('1人練習が完了しました！お疲れ様！🎉');
+}
+
+// "次へ" skips to the start of the next line
+function kNext() {
+  kClearTimers();
+  kMarkLineDone(kIdx);
+  kIdx++; kWordIdx = 0;
+  if (kIdx >= sc.length) { kDone(); return; }
+  kLineFocus(kIdx, true);
+  kUpdateProg();
+  if (kPlaying) kSchedule();
+}
+
+function kRestart() {
+  kStop();
+  kIdx = 0; kWordIdx = 0;
+  // Reset all word spans back to pending
+  sc.forEach((_, li) => {
+    const wc = kTokens[li] ? kTokens[li].wordCount : 0;
+    for (let wi = 0; wi < wc; wi++) {
+      const el = document.getElementById(`kw-${li}-${wi}`);
+      if (el) el.className = 'kword k-pending';
+    }
+  });
+  kLineFocus(0, true);
+  kUpdateProg();
+  document.getElementById('btnPlay').textContent = '▶ スタート';
+}
+
+function onSpeed() {
+  const v = parseInt(document.getElementById('kSpeed').value) - 1;
+  document.getElementById('kSpeedLbl').textContent = SPEED_LABEL[v];
+}
+
+// ─────────────────────────────────────
+//  MEMORY
+// ─────────────────────────────────────
+function mStart() {
+  mLv = 1;
+  mRender();
+  setLv(1);
+  showScr('scr-memory');
+}
+
+function setLv(lv) {
+  mLv = lv;
+  document.querySelectorAll('.lvl-tab').forEach(b => b.classList.toggle('on', +b.dataset.l === lv));
+  document.getElementById('memLvlDesc').textContent = LV_DESC[lv];
+  mRender();
+}
+
+function mRender() {
+  const container = document.getElementById('mScript');
+  container.innerHTML = sc.map((line, i) => {
+    // T lines always full; S lines get memory blanks
+    const segMode = line.role === 'T' ? 'full' : 'mem';
+    const text = renderSegs(line.segs, segMode, mLv);
+    return `<div class="lb role-${line.role}">
+      <div class="role-pill">${line.role}</div>
+      <div class="lt">${text}</div>
+    </div>`;
+  }).join('');
+}
+
+function toggleBlk(el) { el.classList.toggle('rev'); }
+function revealAll()   { document.querySelectorAll('.blk').forEach(e => e.classList.add('rev')); }
+function hideAll()     { document.querySelectorAll('.blk').forEach(e => e.classList.remove('rev')); }
+
+// ─────────────────────────────────────
+//  1-ON-1
+// ─────────────────────────────────────
+function ooStart() {
+  ooIdx = 0; ooRevd = false;
+  ooRender();
+  showScr('scr-oneon1');
+}
+
+function ooRender() {
+  if (ooIdx >= sc.length) {
+    showDone('1対1練習が完了！本番もきっとうまくいく！💪');
+    return;
+  }
+  const line = sc[ooIdx];
+  const isT = line.role === 'T';
+
+  // Badge
+  const badge = document.getElementById('ooBadge');
+  badge.textContent = isT ? '先生 T' : '生徒 S';
+  badge.className = 'turn-badge ' + line.role;
+
+  document.getElementById('ooStep').textContent = `${ooIdx+1} / ${sc.length}`;
+
+  // Main text
+  const textEl = document.getElementById('ooText');
+  if (isT) {
+    textEl.innerHTML = renderSegs(line.segs, 'oo-full', 0);
+  } else if (ooRevd) {
+    textEl.innerHTML = `<span style="color:var(--green-dk);font-weight:600">${renderSegs(line.segs,'oo-full',0)}</span>`;
+  } else {
+    // Show mic icon + prompt; student speaks from memory
+    textEl.innerHTML = `<div class="oo-silent"><div class="mic">🎤</div><p>暗記で言ってみよう！</p></div>`;
+  }
+
+  // Hint button
+  const hintBtn = document.getElementById('ooHintBtn');
+  hintBtn.style.display = (!isT && !ooRevd) ? 'block' : 'none';
+
+  // Hint text
+  const hintTxt = document.getElementById('ooHintTxt');
+  hintTxt.textContent = isT
+    ? '先生がこの台詞を言ったら「次へ」を押してください'
+    : ooRevd
+      ? '生徒が言えたら「次へ」を押してください'
+      : '生徒が暗記で言えるか確認しよう';
+
+  // Next button
+  document.getElementById('ooNxtBtn').textContent =
+    ooIdx < sc.length - 1 ? '次の発話へ →' : '完了！🎉';
+
+  // Context history
+  const ctx = document.getElementById('ooCtx');
+  if (ooIdx === 0) {
+    ctx.innerHTML = '<div style="color:#ccc;font-size:.8em">（まだありません）</div>';
+  } else {
+    const hist = sc.slice(Math.max(0, ooIdx - 3), ooIdx);
+    ctx.innerHTML = hist.map(l => {
+      const txt = renderSegs(l.segs, 'oo-full', 0);
+      return `<div class="ctx-line"><div class="ctx-pill ${l.role}">${l.role}</div><div>${txt}</div></div>`;
+    }).join('');
+  }
+}
+
+function ooReveal() {
+  ooRevd = true;
+  ooRender();
+}
+
+function ooNext() {
+  ooIdx++;
+  ooRevd = false;
+  ooRender();
+}
+
+// ─────────────────────────────────────
+//  COMPLETE
+// ─────────────────────────────────────
+function showDone(msg) {
+  kStop();
+  document.getElementById('doneMsg').textContent = msg;
+  showScr('scr-done');
+}
+
+// ─────────────────────────────────────
+//  TOAST
+// ─────────────────────────────────────
+function toast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg; t.classList.add('on');
+  setTimeout(() => t.classList.remove('on'), 2500);
+}
+</script>
+</body>
+</html>
